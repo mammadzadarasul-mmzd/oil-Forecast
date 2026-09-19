@@ -3,8 +3,8 @@ title: "Oil Price Volatility and Azerbaijan's Fiscal Exposure"
 author: "Rasul Mammadzada"
 date: "2026-08-30"
 output:
-  html_document: default
   github_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
