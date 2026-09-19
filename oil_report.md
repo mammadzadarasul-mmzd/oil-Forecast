@@ -5,16 +5,249 @@ Rasul Mammadzada
 
 ## Introduction
 
+Oil prices move for reasons that have very little to do with oil. A war,
+a sanctions decision, or a closed shipping lane can change the price of
+a barrel by forty percent in a matter of weeks, and no amount of
+historical data contains any warning that these events are coming. This
+creates a serious problem for countries whose national budgets depend on
+oil revenue, because they must plan their spending around a number that
+nobody can predict. Azerbaijan is one of these countries. Oil and gas
+dominate its exports, and when Brent crude collapsed in 2014 and 2015,
+the government devalued the national currency twice within a single
+year.
+
+In this report, I test how well oil prices can actually be forecast, and
+what the answer means for a state that depends on them. Using monthly
+Brent crude prices from 1992 to 2026, I fit an ARIMA model to data
+through February 2026 and then compare its forecast against what
+actually happened over the following five months. I argue that although
+statistical models can describe the historical behaviour of oil prices
+reasonably well, they cannot anticipate the geopolitical shocks that
+drive the largest price movements, and therefore the appropriate policy
+response for an oil-dependent state is not better forecasting but
+stronger fiscal buffers.
+
+The results support this argument. The model I estimated produced an
+average error of 23 percent over the test period, and the actual prices
+fell entirely outside its 95 percent prediction interval for three
+consecutive months. Furthermore, the model barely outperformed a naive
+forecast that simply assumed next month’s price would equal this
+month’s. Additionally, when I compare Azerbaijan’s exposure to that of
+other oil producers, I find that oil rents have averaged 25.1 percent of
+its GDP since 2000, which is higher than Russia and nearly four times
+higher than Norway. This shows that the unpredictability I measured is
+not a technical problem but a structural vulnerability.
+
 ## Data and Methods
+
+This analysis uses monthly Brent crude oil prices from January 1992 to
+July 2026, retrieved from the Federal Reserve Economic Database (FRED,
+series `POILBREUSDM`, originally compiled by the IMF). Brent is the
+primary benchmark for oil traded in Europe, Africa, and the Middle East.
+Azerbaijan’s own crude, Azeri Light, is priced at a differential to
+Brent, so Brent movements closely track the export price that drives
+Azerbaijani oil revenue.
+
+The series contains 415 monthly observations. To evaluate forecasting
+performance honestly, the data are split into a training set (January
+1992 to February 2026, 410 observations) and a test set (March to July
+2026, 5 observations). The split point is deliberate: an armed conflict
+involving the United States, Israel, and Iran began on 28 February 2026,
+disrupting tanker traffic through the Strait of Hormuz. Any model fitted
+through February had no information about this event.
+
+Data on oil dependence come from the World Bank’s World Development
+Indicators (`NY.GDP.PETR.RT.ZS`), which measures oil rents as a
+percentage of GDP.
+
+Modelling proceeds in three stages: classical decomposition to assess
+seasonality Augmented Dickey-Fuller testing for stationarity, and ARIMA
+estimation with model selection by AICc. Forecast accuracy is evaluated
+out of sample against a naive benchmark in which each month’s forecast
+equals the previous month’s observed value.
 
 ## The Series
 
+``` r
+autoplot(oil) +
+  labs(
+    title = "Brent Crude Oil Price, 1992-2026",
+    subtitle = "Monthly average, US dollars per barrel",
+    x = "Year", y = "USD per barrel",
+    caption = "Source: IMF via FRED (POILBREUSDM)"
+  ) +
+  theme_minimal()
+```
+
+![](oil_report_files/figure-gfm/series-plot-1.png)<!-- -->
+
+The series shows the major episodes of recent energy market history: the
+low, stable prices of the 1990s; the sustained climb through the 2000s
+driven by demand growth; the spike above \$130 in mid-2008 followed by
+collapse during the financial crisis; the plateau above \$100 from 2011
+to 2014; the collapse of 2014-15; the COVID-19 trough in 2020; and the
+sharp increase of March 2026.
+
+The 2014-15 collapse is directly relevant to this analysis. As Brent
+fell from roughly \$110 to the mid-\$30s, Azerbaijan devalued the manat
+twice within a single year, in February and December 2015.
+
 ## Diagnostics
+
+To begin with, the decomposition shows that oil prices contain almost no
+seasonal pattern. The seasonal component ranges only from about negative
+three to positive two dollars, while the series itself ranges from
+roughly ten to one hundred and thirty dollars. Even though the seasonal
+component is statistically detectable, it is economically meaningless at
+this scale. This indicates that seasonal modelling is unnecessary here,
+unlike series such as electricity demand or tourism where annual cycles
+are strong.
+
+Furthermore, the Augmented Dickey-Fuller test returns a p-value of
+0.3647 for the price series, which means we cannot reject the hypothesis
+that the series is non-stationary. This is expected, because a price
+that stood at eighteen dollars in 1992 and one hundred dollars in 2026
+has no fixed mean to return to. After taking the first difference, so
+that the model describes monthly changes rather than price levels, the
+same test returns a p-value below 0.01. This demonstrates that one order
+of differencing is sufficient, and it justifies setting d equal to one
+in the model specification.
+
+Additionally, the autocorrelation function of the differenced series
+shows a single significant spike at lag one of approximately 0.34, after
+which the correlations fall inside the confidence bounds. This suggests
+that this month’s price change carries a small amount of information
+about next month’s, and essentially none beyond that. In other words,
+the series behaves close to a random walk, which already implies that
+forecasting performance will be limited.
 
 ## Forecasting the Shock
 
+Automatic model selection by AICc chose an ARIMA(2,1,1) specification.
+On the training data this model performs reasonably well, with a root
+mean squared error of 4.60 dollars and a mean absolute percentage error
+of 6.41 percent. However, these are in-sample statistics, measured on
+the same data used to fit the model, and they are a poor guide to real
+forecasting performance.
+
+The out-of-sample results tell a very different story. The model
+forecast prices of roughly seventy dollars for the months following
+February 2026, since February closed near sixty-nine dollars and nothing
+in the price history suggested otherwise. In reality, Brent reached
+99.41 dollars in March, 102.81 in April, and 103.84 in May. The test set
+root mean squared error is 24.29 dollars and the mean absolute
+percentage error is 22.97 percent, which is roughly five times worse
+than the training error. This shows how misleading in-sample fit
+statistics can be when they are reported without out-of-sample
+validation.
+
+On top of that, the actual values fell outside the model’s 95 percent
+prediction interval for three consecutive months. This is a more serious
+failure than simply being wrong. A prediction interval is supposed to
+express how uncertain the forecast is, and when reality falls outside
+it, the model was not only mistaken but also overconfident. The reason
+is that prediction intervals are constructed from historical volatility,
+so they can only answer the question of how much this series has moved
+in the past. They cannot account for the closure of a shipping lane.
+
+Furthermore, the naive benchmark produced a test error of 26.96 dollars,
+only about ten percent worse than the ARIMA model. After four hundred
+and ten months of data, automatic model selection, and three estimated
+parameters, the sophisticated model was barely better than assuming that
+next month equals this month. This demonstrates that the limitation is
+not in the choice of model but in the nature of the series itself.
+
 ## Fiscal Exposure
+
+The forecasting results matter because of who bears the consequences.
+Oil rents, measured as the value of oil production minus extraction
+costs, have averaged 25.1 percent of Azerbaijan’s GDP between 2000 and
+2021. This is higher than Kazakhstan at 16.1 percent, considerably
+higher than the Russian Federation at 9.7 percent, and nearly four times
+higher than Norway at 6.6 percent. Among the countries compared here,
+only Saudi Arabia is more exposed.
+
+Moreover, the range of Azerbaijan’s exposure is as important as its
+average. Oil rents reached 39.6 percent of GDP in the peak year and fell
+to 11.1 percent in the lowest, a spread of more than twenty-eight
+percentage points. This means that roughly a quarter of the national
+economy expands and contracts according to a price determined in global
+markets. On the other hand, Norway produces large quantities of oil but
+its rents never exceeded 12 percent of GDP, because the surrounding
+economy is diversified enough to absorb the swings. This illustrates
+that exposure is a matter of economic structure and policy rather than
+geology.
+
+To put the two findings together, an error of 22.97 percent applied to a
+sector averaging 25.1 percent of GDP corresponds to approximately 5.8
+percent of GDP. A recession is conventionally defined by a contraction
+of a few percentage points, so the forecast error I measured maps onto a
+movement several times that size. This suggests that oil price
+uncertainty is not a marginal budgeting difficulty for Azerbaijan but a
+first-order macroeconomic risk.
 
 ## Limitations
 
+This analysis has several limitations that should be acknowledged.
+
+To begin with, the test set contains only five observations. Five months
+is a very short evaluation window, and the error statistics reported
+here are therefore imprecise. A longer test period would give more
+reliable estimates, although it would also dilute the specific episode
+that this analysis is designed to examine.
+
+Furthermore, ARIMA models assume constant variance, and the differenced
+series clearly violates this assumption. The monthly changes cluster, so
+that calm periods are followed by calm periods and volatile periods by
+volatile ones. This pattern is well known in financial series and is
+normally handled with GARCH models, which explicitly model changing
+variance. My model does not capture it, which means the prediction
+intervals are probably too narrow during volatile periods and too wide
+during calm ones.
+
+Additionally, the calculation linking the forecast error to GDP is
+illustrative arithmetic rather than a macroeconomic estimate. Oil rents
+do not translate one for one into national output, the relationship is
+not linear, and a proper fiscal model would account for production
+volumes, the sovereign wealth fund, the exchange rate regime, as well as
+any hedging arrangements. What the calculation does show is the order of
+magnitude of the problem, not a precise figure.
+
+Finally, this analysis uses Brent crude as a proxy for Azerbaijan’s
+export price. Azeri Light is priced at a differential to Brent and
+normally trades at a small premium, so the two move together closely,
+but they are not identical. Using the actual export price would be
+preferable if the data were publicly available.
+
 ## Conclusion
+
+In conclusion, this analysis finds that oil prices cannot be usefully
+forecast from their own history. A properly specified ARIMA model,
+selected automatically and validated out of sample, produced an average
+error of nearly twenty-three percent over five months and missed the
+actual outcome by so much that reality fell outside its own confidence
+interval. The model also failed to substantially outperform a naive
+forecast that assumed no change at all.
+
+The reason for this failure is not a defect in the method. The largest
+price movement in the sample period was caused by an armed conflict that
+disrupted a major shipping route, and no amount of price history
+contains information about when such an event will occur. This shows us
+that the limits of forecasting here are not technical but informational.
+
+For a country like Azerbaijan, where oil rents have averaged a quarter
+of GDP, this has a direct policy implication. If the price cannot be
+predicted, then a budget built on price assumptions will periodically be
+wrong by a large margin, and in both directions. The 2014 to 2015
+collapse produced two currency devaluations, while the 2026 shock
+produced an unexpected windfall. Therefore the appropriate response is
+not to invest in better forecasting models but to build fiscal
+institutions that can absorb shocks, which is the argument for a
+sovereign wealth fund and for countercyclical budgeting. Norway’s
+experience suggests this is achievable, since it produces comparable
+quantities of oil while remaining far less exposed to its price.
+
+Future work could extend this analysis by modelling volatility directly
+with a GARCH specification, or by testing whether the inclusion of
+geopolitical risk indices improves forecast performance during shock
+periods.
